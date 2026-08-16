@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Songless Brasil - Adivinhe a Música</title>
+    <style>
+        :root {
+            --bg-color: #121213;
+            --panel-color: #18181b;
+            --text-color: #ffffff;
+            --accent-color: #10b981;
+            --accent-hover: #059669;
+            --border-color: #27272a;
+            --error-color: #ef4444;
+            --success-color: #22c55e;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--panel-color);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--accent-color);
+            letter-spacing: 1px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 90%;
+            margin: 30px auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .game-card {
+            background-color: var(--panel-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        /* Barras de Tentativa/Progresso do Player */
+        .attempts-bars {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 25px;
+            justify-content: center;
+        }
+
+        .bar {
+            flex: 1;
+            height: 8px;
+            background-color: var(--border-color);
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        .bar.active {
+            background-color: var(--accent-color);
+        }
+
+        .bar.guessed {
+            background-color: var(--success-color);
+        }
+
+        .bar.wrong {
+            background-color: var(--error-color);
+        }
+
+        /* Player de Áudio */
+        .player-section {
+            margin-bottom: 25px;
+        }
+
+        .play-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .play-btn:hover {
+            background-color: var(--accent-hover);
+            transform: scale(1.03);
+        }
+
+        .play-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Caixa de Busca de Músicas */
+        .search-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 14px 16px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-color);
+        }
+
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: var(--panel-color);
+            border: 1px solid var(--border-color);
+            border-radius: 0 0 8px 8px;
+            max-height: 180px;
+            overflow-y: auto;
+            z-index: 10;
+            display: none;
+            text-align: left;
+        }
+
+        .suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s;
+        }
+
+        .suggestion-item:hover {
+            background-color: var(--border-color);
+        }
+
+        /* Histórico de Tentativas */
+        .guesses-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .guess-row {
+            padding: 12px 16px;
+            border-radius: 8px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .guess-row.correct {
+            border-color: var(--success-color);
+            color: var(--success-color);
+            font-weight: bold;
+        }
+
+        .guess-row.incorrect {
+            border-color: var(--error-color);
+            color: var(--error-color);
+            opacity: 0.7;
+        }
+
+        /* Tela de Fim de Jogo */
+        .game-over-screen {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .btn-restart {
+            background-color: var(--text-color);
+            color: var(--bg-color);
+            border: none;
+            padding: 12px 24px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🎵 Songless Brasil</h1>
+        <p style="margin: 5px 0 0; color: #a1a1aa; font-size: 0.9rem;">Adivinhe a música brasileira do dia</p>
+    </header>
+
+    <div class="container">
+        <div class="game-card">
+            <!-- Barras indicadoras de segundos/tentativas (Padrão Heardle/Songless: 1s, 2s, 4s, 7s, 11s, 16s) -->
+            <div class="attempts-bars" id="attemptsBars">
+                <div class="bar" data-index="0"></div>
+                <div class="bar" data-index="1"></div>
+                <div class="bar" data-index="2"></div>
+                <div class="bar" data-index="3"></div>
+                <div class="bar" data-index="4"></div>
+                <div class="bar" data-index="5"></div>
+            </div>
+
+            <!-- Player -->
+            <div class="player-section" id="playerSection">
+                <button class="play-btn" id="playBtn" onclick="playSnippet()">▶ Ouvir (1s)</button>
+            </div>
+
+            <!-- Busca -->
+            <div class="search-container" id="searchContainer">
+                <input type="text" id="guessInput" placeholder="Digite o artista ou nome da música..." oninput="handleSearch(this.value)">
+                <div class="suggestions" id="suggestionsBox"></div>
+            </div>
+
+            <!-- Lista de Palpites Feitos -->
+            <div class="guesses-list" id="guessesList"></div>
+
+            <!-- Tela de Resultado / Fim de Jogo -->
+            <div class="game-over-screen" id="gameOverScreen">
+                <h2 id="resultTitle" style="margin-top:0;"></h2>
+                <p id="resultSongInfo"></p>
+                <button class="btn-restart" onclick="initGame()">Próxima Música</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Elemento de Áudio Oculto -->
+    <audio id="audioPlayer"></audio>
+
+    <script>
+        // Banco de dados de músicas brasileiras (MPB, Funk, Sertanejo, etc.)
+        // Dica: Substitua as URLs de exemplo por links diretos de arquivos MP3 válidos.
+        const playlist = [
+            {
+                title: "Garota de Ipanema",
+                artist: "Tom Jobim & Vinícius de Moraes",
+                genre: "MPB",
+                url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" // Troque pelo link da música real
+            },
+            {
+                title: "Envolver",
+                artist: "Anitta",
+                genre: "Funk / Pop",
+                url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" // Troque pelo link da música real
+            },
+            {
+                title: "Evidências",
+                artist: "Chitãozinho & Xororó",
+                genre: "Sertanejo",
+                url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" // Troque pelo link da música real
+            }
+        ];
+
+        let currentSongIndex = 0;
+        let currentAttempt = 0;
+        let maxAttempts = 6;
+        let durations = [1, 2, 4, 7, 11, 16]; // Segundos liberados a cada erro
+        let isPlaying = false;
+        let gameEnded = false;
+
+        const audio = document.getElementById('audioPlayer');
+        const playBtn = document.getElementById('playBtn');
+        const guessInput = document.getElementById('guessInput');
+        const suggestionsBox = document.getElementById('suggestionsBox');
+        const guessesList = document.getElementById('guessesList');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const searchContainer = document.getElementById('searchContainer');
+        const attemptsBars = document.getElementById('attemptsBars');
+
+        function initGame() {
+            // Sorteia uma música aleatória
+            currentSongIndex = Math.floor(Math.random() * playlist.length);
+            currentAttempt = 0;
+            gameEnded = false;
+            guessInput.value = '';
+            guessInput.disabled = false;
+            searchContainer.style.display = 'block';
+            gameOverScreen.style.display = 'none';
+            guessesList.innerHTML = '';
+            
+            audio.src = playlist[currentSongIndex].url;
+            
+            updateBars();
+            updatePlayButtonText();
+        }
+
+        function updateBars() {
+            const bars = attemptsBars.children;
+            for (let i = 0; i < bars.length; i++) {
+                bars[i].className = 'bar';
+                if (i < currentAttempt) {
+                    bars[i].classList.add('wrong');
+                } else if (i === currentAttempt) {
+                    bars[i].classList.add('active');
+                }
+            }
+        }
+
+        function updatePlayButtonText() {
+            if (currentAttempt < durations.length) {
+                playBtn.innerText = `▶ Ouvir (${durations[currentAttempt]}s)`;
+            } else {
+                playBtn.innerText = `▶ Ouvir Música Completa`;
+            }
+        }
+
+        function playSnippet() {
+            if (gameEnded) {
+                audio.currentTime = 0;
+                audio.play();
+                return;
+            }
+
+            let playDuration = currentAttempt < durations.length ? durations[currentAttempt] : 30;
+            
+            audio.currentTime = 0;
+            audio.play();
+            playBtn.innerText = "⏸ Tocando...";
+            
+            setTimeout(() => {
+                audio.pause();
+                updatePlayButtonText();
+            }, playDuration * 1000);
+        }
+
+        function handleSearch(query) {
+            if (!query.trim()) {
+                suggestionsBox.style.display = 'none';
+                return;
+            }
+
+            const filtered = playlist.filter(song => 
+                song.title.toLowerCase().includes(query.toLowerCase()) || 
+                song.artist.toLowerCase().includes(query.toLowerCase())
+            );
+
+            if (filtered.length > 0) {
+                suggestionsBox.innerHTML = filtered.map(song => 
+                    `<div class="suggestion-item" onclick="makeGuess('${song.artist} - ${song.title}')">${song.artist} - ${song.title}</div>`
+                ).join('');
+                suggestionsBox.style.display = 'block';
+            } else {
+                suggestionsBox.style.display = 'none';
+            }
+        }
+
+        function makeGuess(guessText) {
+            suggestionsBox.style.display = 'none';
+            guessInput.value = '';
+
+            const targetSong = playlist[currentSongIndex];
+            const targetString = `${targetSong.artist} - ${targetSong.title}`;
+            
+            const isCorrect = guessText.toLowerCase() === targetString.toLowerCase();
+
+            // Adiciona ao histórico visual
+            const row = document.createElement('div');
+            row.className = `guess-row ${isCorrect ? 'correct' : 'incorrect'}`;
+            row.innerHTML = `<span>${guessText}</span><span>${isCorrect ? '✓ CORRETO' : '✗'}</span>`;
+            guessesList.appendChild(row);
+
+            if (isCorrect) {
+                endGame(true);
+            } else {
+                currentAttempt++;
+                if (currentAttempt >= maxAttempts) {
+                    endGame(false);
+                } else {
+                    updateBars();
+                    updatePlayButtonText();
+                }
+            }
+        }
+
+        function endGame(won) {
+            gameEnded = true;
+            searchContainer.style.display = 'none';
+            gameOverScreen.style.display = 'block';
+            
+            const targetSong = playlist[currentSongIndex];
+            
+            if (won) {
+                document.getElementById('resultTitle').innerText = "🎉 Parabéns, você acertou!";
+                document.getElementById('resultTitle').style.color = "var(--success-color)";
+                // Marca as barras restantes como ganhas
+                const bars = attemptsBars.children;
+                bars[currentAttempt].className = 'bar guessed';
+            } else {
+                document.getElementById('resultTitle').innerText = "😢 Não foi dessa vez!";
+                document.getElementById('resultTitle').style.color = "var(--error-color)";
+            }
+            
+            document.getElementById('resultSongInfo').innerHTML = `A música era: <b>${targetSong.artist} - ${targetSong.title}</b> (${targetSong.genre})`;
+            playBtn.innerText = "▶ Ouvir Música Completa";
+        }
+
+        // Inicia o jogo ao carregar a página
+        window.onload = initGame;
+    </script>
+</body>
+</html>
